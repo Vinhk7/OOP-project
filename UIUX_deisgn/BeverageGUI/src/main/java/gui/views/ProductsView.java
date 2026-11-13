@@ -4,55 +4,90 @@ import gui.Fmt;
 import gui.model.*;
 import gui.service.AppService;
 import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-/** Product table with search. editable=true (Manager) also shows Add / Delete. */
+/** Product table with search and category filter. editable=true (Manager) also shows Add / Edit / Delete. */
 public class ProductsView extends VBox {
     private final AppService service;
     private final TableView<Product> table = new TableView<>();
-    private FilteredList<Product> filtered;
+    private final ObservableList<Product> masterData = FXCollections.observableArrayList();
+    private final FilteredList<Product> filtered = new FilteredList<>(masterData);
+    private final TextField search = new TextField();
+    private final ComboBox<Category> catFilter = new ComboBox<>();
+    private static final Category ALL = new Category(0, "All Categories");
 
     public ProductsView(AppService service, boolean editable) {
         super(12);
         this.service = service;
 
-        TextField search = new TextField();
         search.setPromptText("Search products…");
-        HBox bar = new HBox(10, search);
+        catFilter.getItems().add(ALL);
+        catFilter.getItems().addAll(service.getCategories());
+        catFilter.setValue(ALL);
+
+        HBox bar = new HBox(10, search, catFilter);
         HBox.setHgrow(search, Priority.ALWAYS);
 
         TableColumn<Product, String> name = new TableColumn<>("Name");
         name.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().name()));
+
         TableColumn<Product, String> cat = new TableColumn<>("Category");
         cat.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(categoryName(c.getValue().categoryId())));
+
         TableColumn<Product, String> price = new TableColumn<>("Price");
         price.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(Fmt.money(c.getValue().price())));
+
         TableColumn<Product, String> avail = new TableColumn<>("Available");
         avail.setCellValueFactory(c -> new javafx.beans.property.SimpleStringProperty(c.getValue().available() ? "Yes" : "No"));
+        avail.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String val, boolean empty) {
+                super.updateItem(val, empty);
+                if (empty || val == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    boolean isYes = val.equals("Yes");
+                    Label badge = new Label(isYes ? "Available" : "Out of stock");
+                    String style = isYes
+                            ? "-fx-background-color: #E6F4EA; -fx-text-fill: #1E7E34;"
+                            : "-fx-background-color: #FCE8E6; -fx-text-fill: #C5221F;";
+                    badge.setStyle(style + " -fx-font-weight: bold; -fx-font-size: 12px; -fx-padding: 3 10; -fx-background-radius: 12;");
+                    setText(null);
+                    setGraphic(badge);
+                }
+            }
+        });
+
         table.getColumns().addAll(name, cat, price, avail);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setPlaceholder(new Label("No products found."));
+        table.setItems(filtered);
         VBox.setVgrow(table, Priority.ALWAYS);
-        load();
-        search.textProperty().addListener((o, a, b) -> {
-            String q = b.toLowerCase().trim();
-            filtered.setPredicate(p -> q.isEmpty() || p.name().toLowerCase().contains(q));
-        });
+
+        search.textProperty().addListener((o, a, b) -> applyFilter());
+        catFilter.valueProperty().addListener((o, a, b) -> applyFilter());
 
         if (editable) {
             Button add = new Button("+ Add product");
             add.getStyleClass().add("primary");
             add.setOnAction(e -> openDialog(null));
+
             Button edit = new Button("Edit selected");
             edit.setOnAction(e -> editSelected());
+
             table.setRowFactory(tv -> {
                 TableRow<Product> row = new TableRow<>();
-                row.setOnMouseClicked(ev -> { if (ev.getClickCount() == 2 && !row.isEmpty()) openDialog(row.getItem()); });
+                row.setOnMouseClicked(ev -> {
+                    if (ev.getClickCount() == 2 && !row.isEmpty()) openDialog(row.getItem());
+                });
                 return row;
             });
+
             Button del = new Button("Delete selected");
             del.getStyleClass().add("danger");
             del.setOnAction(e -> {
@@ -66,12 +101,24 @@ public class ProductsView extends VBox {
             });
             bar.getChildren().addAll(add, edit, del);
         }
+
         getChildren().addAll(bar, table);
+        load();
     }
 
     private void load() {
-        filtered = new FilteredList<>(FXCollections.observableArrayList(service.getProducts()));
-        table.setItems(filtered);
+        masterData.setAll(service.getProducts());
+        applyFilter();
+    }
+
+    private void applyFilter() {
+        String q = search.getText() == null ? "" : search.getText().toLowerCase().trim();
+        Category selectedCat = catFilter.getValue();
+        filtered.setPredicate(p -> {
+            boolean matchName = q.isEmpty() || p.name().toLowerCase().contains(q);
+            boolean matchCat = selectedCat == null || selectedCat.id() == 0 || p.categoryId() == selectedCat.id();
+            return matchName && matchCat;
+        });
     }
 
     private String categoryName(int id) {

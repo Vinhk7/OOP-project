@@ -7,13 +7,43 @@ import java.util.*;
 /** Fake data (same samples as the report) so the GUI runs without the backend. */
 public class MockAppService implements AppService {
     private final List<Category> categories = new ArrayList<>(List.of(
-            new Category(1, "Coffee"), new Category(2, "Milk Tea")));
+            new Category(1, "Coffee"),
+            new Category(2, "Milk Tea"),
+            new Category(3, "Fruit Tea"),
+            new Category(4, "Matcha & Choco"),
+            new Category(5, "Frappe & Smoothie"),
+            new Category(6, "Bakery")
+
+
+    ));
+
     private final List<Product> products = new ArrayList<>(List.of(
-            new Product(1, "Americano", 1, 35000, true),
-            new Product(2, "Brown Sugar Milk Tea", 2, 45000, true),
-            new Product(3, "Latte", 1, 45000, true),
-            new Product(4, "Espresso", 1, 30000, false),
-            new Product(5, "Matcha Milk Tea", 2, 50000, true)));
+            // 1. Coffee
+            new Product(1, "Americano", 1, 35000, true, "/images/americano.png"),
+            new Product(2, "Latte", 1, 45000, true, "/images/latte.png"),
+            new Product(3, "Espresso", 1, 30000, false, "/images/espresso.png"),
+
+            // 2. Milk Tea
+            new Product(4, "Brown Sugar Milk Tea", 2, 45000, true, "/images/brown-sugar-milk-tea.png"),
+            new Product(5, "Matcha Milk Tea", 2, 50000, true, "/images/matcha-milk-tea.png"),
+            new Product(6, "Oolong Milk Tea", 2, 42000, true, "/images/oolong-milk-tea.png"),
+
+            // 3. Fruit Tea
+            new Product(7, "Peach Lemongrass Tea", 3, 45000, true, "/images/peach-lemongrass-tea.png"),
+            new Product(8, "Lychee Rose Tea", 3, 45000, true, "/images/lychee-rose-tea.png"),
+            new Product(9, "Tropical Mango Tea", 3, 48000, true, "/images/tropical-mango-tea.png"),
+
+            // 4. Matcha & Choco
+            new Product(10, "Iced Dark Chocolate", 4, 45000, true, "/images/iced-dark-chocolate.png"),
+            new Product(11, "Iced Matcha Latte", 4, 48000, true, "/images/iced-matcha-latte.png"),
+            new Product(12, "Roasted Hojicha Latte", 4, 48000, false, "/images/roasted-hojicha-latte.png"),
+
+            // 5. Frappe & Smoothie
+            new Product(13, "Blueberry Yogurt Smoothie", 5, 52000, true,"/images/blueberry-yogurt-smoothie.png" ),
+            new Product(14, "Caramel Coffee Frappe", 5, 55000, true,"/images/caramel-coffee-frappe.png"),
+            new Product(15, "Oreo Cookies Frappe", 5, 55000, true,"/images/oreo-cookies-frappe.png")
+    ));
+
     private final List<TableInfo> tables = new ArrayList<>();
     private final List<Order> orders = new ArrayList<>();
     private final List<Employee> employees = new ArrayList<>(List.of(
@@ -21,19 +51,16 @@ public class MockAppService implements AppService {
             new Employee(2, "staff01", "Tran Minh Anh", "Staff", "0912345678", "Active")));
     private final Map<String, String> passwords = new HashMap<>(Map.of("manager01", "123456", "staff01", "123456"));
     private final Map<Integer, List<OrderLine>> orderLines = new HashMap<>();
-    private int nextCategoryId = 3, nextProductId = 6, nextTableId = 9, nextOrderId = 3, nextEmployeeId = 3;
+    private int nextCategoryId = 7, nextProductId = 19, nextTableId = 1, nextOrderId = 3, nextEmployeeId = 3;
 
     public MockAppService() {
-        for (int i = 1; i <= 8; i++)
-            tables.add(new TableInfo(i, String.format("Table %02d", i), i == 2 || i == 5 ? "Occupied" : "Available"));
-        orders.add(new Order(1, 1, "Table 01", "Tran Minh Anh", LocalDateTime.of(2026, 10, 17, 14, 30), 80000, "Completed"));
-        orders.add(new Order(2, 2, "Table 02", "Tran Minh Anh", LocalDateTime.of(2026, 10, 17, 15, 10), 90000, "Preparing"));
-        orderLines.put(1, List.of(new OrderLine(products.get(0), 1), new OrderLine(products.get(1), 1)));
-        orderLines.put(2, List.of(new OrderLine(products.get(1), 2)));
+        orders.add(new Order(1, 0, "Counter", "Tran Minh Anh", LocalDateTime.of(2026, 10, 17, 14, 30), 80000, "Completed"));
+        orders.add(new Order(2, 0, "Counter", "Tran Minh Anh", LocalDateTime.of(2026, 10, 17, 15, 10), 90000, "Preparing"));
+        orderLines.put(1, List.of(new OrderLine(products.get(0), 1), new OrderLine(products.get(3), 1)));
+        orderLines.put(2, List.of(new OrderLine(products.get(3), 2)));
     }
 
     @Override public User login(String u, String p) {
-        // like the real thing: right password AND an Active account
         if (!p.equals(passwords.get(u))) return null;
         return employees.stream()
                 .filter(e -> e.username().equals(u) && e.status().equals("Active"))
@@ -60,22 +87,20 @@ public class MockAppService implements AppService {
         products.add(new Product(nextProductId++, name, categoryId, price, available));
     }
     @Override public void updateProduct(int id, String name, int categoryId, long price, boolean available) {
-        for (int i = 0; i < products.size(); i++)
-            if (products.get(i).id() == id) products.set(i, new Product(id, name, categoryId, price, available));
+        for (int i = 0; i < products.size(); i++) {
+            Product old = products.get(i);
+            if (old.id() == id) {
+                products.set(i, new Product(id, name, categoryId, price, available, old.imagePath()));
+            }
+        }
     }
     @Override public void deleteProduct(int id) { products.removeIf(p -> p.id() == id); }
 
-    // tables
+    // tables (giữ stub để tương thích interface AppService)
     @Override public List<TableInfo> getTables() { return new ArrayList<>(tables); }
-    @Override public void setTableStatus(int id, String status) {
-        tables.stream().filter(t -> t.getId() == id).findFirst().ifPresent(t -> t.setStatus(status));
-    }
-    @Override public void addTable(String name) { tables.add(new TableInfo(nextTableId++, name, "Available")); }
-    @Override public boolean deleteTable(int id) {
-        if (tables.stream().anyMatch(t -> t.getId() == id && !t.isAvailable())) return false;
-        tables.removeIf(t -> t.getId() == id);
-        return true;
-    }
+    @Override public void setTableStatus(int id, String status) {}
+    @Override public void addTable(String name) {}
+    @Override public boolean deleteTable(int id) { return true; }
 
     // orders
     @Override public List<Order> getOrders() {
@@ -85,12 +110,10 @@ public class MockAppService implements AppService {
     }
     @Override public void createOrder(int tableId, int userId, List<OrderLine> lines) {
         long total = lines.stream().mapToLong(OrderLine::getSubtotal).sum();
-        String tableName = tables.stream().filter(t -> t.getId() == tableId).map(TableInfo::getName).findFirst().orElse("?");
         String who = employees.stream().filter(e -> e.id() == userId).map(Employee::fullName).findFirst().orElse("?");
         int id = nextOrderId++;
-        orders.add(new Order(id, tableId, tableName, who, LocalDateTime.now(), total, "Preparing"));
+        orders.add(new Order(id, 0, "Counter", who, LocalDateTime.now(), total, "Preparing"));
         orderLines.put(id, lines.stream().map(l -> new OrderLine(l.getProduct(), l.getQuantity())).toList());
-        setTableStatus(tableId, "Occupied");
     }
     @Override public List<OrderLine> getOrderLines(int orderId) { return orderLines.getOrDefault(orderId, List.of()); }
     @Override public void updateOrderStatus(int orderId, String status) {
@@ -98,7 +121,6 @@ public class MockAppService implements AppService {
             Order o = orders.get(i);
             if (o.id() == orderId) {
                 orders.set(i, new Order(o.id(), o.tableId(), o.tableName(), o.employeeName(), o.time(), o.total(), status));
-                if (!status.equals("Preparing")) setTableStatus(o.tableId(), "Available");
             }
         }
     }
@@ -125,3 +147,4 @@ public class MockAppService implements AppService {
     }
     @Override public void deleteEmployee(int id) { employees.removeIf(e -> e.id() == id); }
 }
+

@@ -1,34 +1,265 @@
-/* One place to change the whole look.
-   Palette: brown #6F4E37, cream #F5EFE6, green #4CAF50, red #E57373, text #2B2B2B */
-.root { -fx-font-family: "Segoe UI", "Roboto", sans-serif; -fx-font-size: 14px; -fx-text-fill: #2B2B2B; }
-.app-bg { -fx-background-color: #F5EFE6; }
-.title { -fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #4A3424; }
-.subtitle { -fx-font-size: 16px; -fx-font-weight: bold; }
-.muted { -fx-text-fill: #7a6a5c; }
-.error { -fx-text-fill: #C62828; }
-.total { -fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4A3424; }
+/* Palette: Espresso #3B281C, Coffee #6F4E37, Warm Cream #F7F4F0, Surface #FFFFFF, Border #E6DDD3 */
 
-.card { -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 8, 0, 0, 2); }
-.topbar { -fx-background-color: white; -fx-border-color: #E5DACB; -fx-border-width: 0 0 1 0; }
+.root {
+    -fx-font-family: "Segoe UI", "Inter", "Roboto", sans-serif;
+    -fx-font-size: 13.5px;
+    -fx-text-fill: #2B2118;
+}
 
-.sidebar { -fx-background-color: #4A3424; }
-.brand { -fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold; -fx-padding: 0 0 12 0; }
-.section-label { -fx-text-fill: #CDB79E; -fx-font-size: 11px; -fx-padding: 8 0 0 4; }
-.nav { -fx-background-color: transparent; -fx-text-fill: white; -fx-alignment: CENTER_LEFT; -fx-padding: 9 12; -fx-background-radius: 8; -fx-cursor: hand; }
-.nav:hover { -fx-background-color: #6F4E37; }
+.app-bg {
+    -fx-background-color: #F7F4F0;
+}
 
-.button { -fx-background-radius: 8; -fx-padding: 8 16; -fx-cursor: hand; }
-.button.primary { -fx-background-color: #6F4E37; -fx-text-fill: white; -fx-font-weight: bold; }
-.button.primary:hover { -fx-background-color: #5A3E2C; }
-.button.danger { -fx-background-color: #E57373; -fx-text-fill: white; }
+/* Typography */
+.title {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3B281C;
+}
+.subtitle {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3B281C;
+}
+.muted {
+    -fx-text-fill: #857567;
+    -fx-font-size: 12.5px;
+}
+.error {
+    -fx-text-fill: #C62828;
+    -fx-font-weight: 600;
+}
+.total {
+    -fx-font-size: 19px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3B281C;
+}
 
+/* Topbar & Cards */
+.topbar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent transparent #E6DDD3 transparent;
+    -fx-border-width: 1;
+}
+
+.card {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 14;
+    -fx-border-color: #EDE6DE;
+    -fx-border-radius: 14;
+    -fx-effect: dropshadow(three-pass-box, rgba(43, 33, 24, 0.06), 14, 0, 0, 4);
+}
+
+/* Sidebar */
+.sidebar {
+    -fx-background-color: #3B281C;
+}
+.brand {
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-padding: 4 0 16 4;
+}
+.section-label {
+    -fx-text-fill: #B8A390;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 0 4 8;
+}
+.nav {
+    -fx-background-color: transparent;
+    -fx-text-fill: #EFE8E1;
+    -fx-font-size: 13.5px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 14;
+    -fx-background-radius: 10;
+    -fx-border-color: transparent;
+    -fx-cursor: hand;
+}
+.nav:hover {
+    -fx-background-color: #543A29;
+    -fx-text-fill: #FFFFFF;
+}
+.nav:focused {
+    -fx-background-color: #6F4E37;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+
+/* Buttons */
+.button {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D8CEC3;
+    -fx-border-radius: 9;
+    -fx-background-radius: 9;
+    -fx-text-fill: #3B281C;
+    -fx-font-weight: 600;
+    -fx-padding: 8 16;
+    -fx-cursor: hand;
+}
+.button:hover {
+    -fx-background-color: #F4EFEA;
+    -fx-border-color: #B5A493;
+}
+
+.button.primary {
+    -fx-background-color: #6F4E37;
+    -fx-border-color: #6F4E37;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+.button.primary:hover {
+    -fx-background-color: #593E2B;
+    -fx-border-color: #593E2B;
+}
+
+.button.danger {
+    -fx-background-color: #E05A5A;
+    -fx-border-color: #E05A5A;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}
+.button.danger:hover {
+    -fx-background-color: #C94646;
+    -fx-border-color: #C94646;
+}
+
+/* Inputs */
+.text-field, .password-field {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D8CEC3;
+    -fx-border-radius: 9;
+    -fx-background-radius: 9;
+    -fx-padding: 8 12;
+}
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #6F4E37;
+    -fx-effect: dropshadow(three-pass-box, rgba(111, 78, 55, 0.14), 6, 0, 0, 0);
+}
+
+.combo-box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #D8CEC3;
+    -fx-border-radius: 9;
+    -fx-background-radius: 9;
+    -fx-padding: 3 8;
+}
+.combo-box:focused {
+    -fx-border-color: #6F4E37;
+}
+
+/* Modern Flat TableView (xóa style xám mặc định của JavaFX) */
+.table-view {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 12;
+    -fx-border-color: #E6DDD3;
+    -fx-border-radius: 12;
+    -fx-padding: 4;
+    -fx-effect: dropshadow(three-pass-box, rgba(43, 33, 24, 0.04), 10, 0, 0, 3);
+}
+.table-view .column-header-background {
+    -fx-background-color: #FAF7F4;
+    -fx-background-radius: 9 9 0 0;
+    -fx-border-color: transparent transparent #E6DDD3 transparent;
+}
+.table-view .column-header, .table-view .filler {
+    -fx-background-color: transparent;
+    -fx-size: 42px;
+}
+.table-view .column-header .label {
+    -fx-text-fill: #6E5D4F;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 0 0 0 10;
+}
+.table-view .table-cell {
+    -fx-border-color: transparent;
+    -fx-padding: 10 14;
+    -fx-text-fill: #2B2118;
+    -fx-alignment: CENTER_LEFT;
+}
+.table-row-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent transparent #F3EDE6 transparent;
+    -fx-cell-size: 46px;
+}
+.table-row-cell:empty {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: transparent;
+}
+.table-row-cell:filled:hover {
+    -fx-background-color: #FAF6F1;
+}
+.table-row-cell:filled:selected {
+    -fx-background-color: #EFE5DA;
+}
+.table-row-cell:filled:selected .table-cell {
+    -fx-text-fill: #3B281C;
+    -fx-font-weight: 600;
+}
+
+/* Product Cards (trong màn hình Order) */
+.product-card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E6DDD3;
+    -fx-border-radius: 12;
+    -fx-background-radius: 12;
+    -fx-padding: 12;
+    -fx-text-alignment: center;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(43, 33, 24, 0.04), 8, 0, 0, 2);
+}
+.product-card:hover {
+    -fx-border-color: #6F4E37;
+    -fx-background-color: #FCF9F6;
+}
+.product-card:disabled {
+    -fx-opacity: 0.45;
+}
+
+/* Table Tiles (giữ tạm cho tới khi xóa hẳn TablesView) */
 .table-tile { -fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: white; -fx-background-radius: 12; -fx-text-alignment: center; }
 .table-tile.available { -fx-background-color: #4CAF50; }
 .table-tile.occupied { -fx-background-color: #E57373; }
 
-.product-card { -fx-background-color: white; -fx-border-color: #E5DACB; -fx-border-radius: 10; -fx-background-radius: 10; -fx-text-alignment: center; }
-.product-card:hover { -fx-border-color: #6F4E37; }
-.product-card:disabled { -fx-opacity: 0.45; }
+/* Thanh cuộn tối giản */
+.clear-scroll, .clear-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+.scroll-bar:vertical, .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+.scroll-bar .thumb {
+    -fx-background-color: #D5C8BA;
+    -fx-background-radius: 8;
+}
+.scroll-bar .thumb:hover {
+    -fx-background-color: #B3A290;
+}
+.scroll-bar .increment-button, .scroll-bar .decrement-button {
+    -fx-padding: 0;
+    -fx-opacity: 0;
+}
 
-.clear-scroll, .clear-scroll > .viewport { -fx-background-color: transparent; }
-.text-field, .password-field, .combo-box { -fx-background-radius: 8; -fx-padding: 6 10; }
+.button.nav {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #EFE8E1;
+    -fx-font-size: 13.5px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 14;
+    -fx-background-radius: 10;
+    -fx-cursor: hand;
+}
+.button.nav:hover {
+    -fx-background-color: #543A29;
+    -fx-border-color: transparent;
+    -fx-text-fill: #FFFFFF;
+}
+.button.nav.active, .button.nav:focused {
+    -fx-background-color: #6F4E37;
+    -fx-border-color: transparent;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-weight: bold;
+}

@@ -6,8 +6,17 @@ import gui.service.AppService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.TextAlignment;
+import java.io.File;
+import java.io.InputStream;
 
 /** Left: menu cards (search + category filter). Right: current order with running total. */
 public class OrderView extends HBox {
@@ -19,74 +28,126 @@ public class OrderView extends HBox {
     private final TextField search = new TextField();
     private final ComboBox<Category> filter = new ComboBox<>();
     private static final Category ALL = new Category(0, "All");
+    private double currentCardWidth = 138;
 
-    public OrderView(AppService service, User user, TableInfo table, Runnable onDone) {
+    public OrderView(AppService service, User user, Runnable onDone) {
         super(20);
         this.service = service;
 
-        // ----- left: menu -----
+        // ----- Left: Menu -----
         search.setPromptText("Search drinks…");
         filter.getItems().add(ALL);
         filter.getItems().addAll(service.getCategories());
         filter.setValue(ALL);
         search.textProperty().addListener((o, a, b) -> refreshCards());
         filter.valueProperty().addListener((o, a, b) -> refreshCards());
+
         HBox tools = new HBox(10, search, filter);
         HBox.setHgrow(search, Priority.ALWAYS);
+
         ScrollPane scroll = new ScrollPane(cards);
         scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.getStyleClass().add("clear-scroll");
+        scroll.viewportBoundsProperty().addListener((obs, oldB, newB) -> {
+            double available = newB.getWidth() - 4;
+            if (available <= 0) return;
+            double minColWidth = 130;
+            int cols = Math.max(2, (int) ((available + 12) / (minColWidth + 12)));
+            double newCardW = Math.floor((available - 12 * (cols - 1)) / cols);
+            if (Math.abs(newCardW - currentCardWidth) >= 1) {
+                currentCardWidth = newCardW;
+                refreshCards();
+            }
+        });
+
         VBox left = new VBox(12, tools, scroll);
         VBox.setVgrow(scroll, Priority.ALWAYS);
         HBox.setHgrow(left, Priority.ALWAYS);
 
-        // ----- right: order -----
-        Label head = new Label("Current order");
+        // ----- Right: Current Order -----
+        Label head = new Label("Current Order");
         head.getStyleClass().add("subtitle");
+
         list.setCellFactory(lv -> new ListCell<>() {
-            @Override protected void updateItem(OrderLine l, boolean empty) {
+            @Override
+            protected void updateItem(OrderLine l, boolean empty) {
                 super.updateItem(l, empty);
-                setText(empty || l == null ? null
-                        : l.getProduct().name() + "  x" + l.getQuantity() + "   " + Fmt.money(l.getSubtotal()));
+                if (empty || l == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    Label name = new Label(l.getProduct().name());
+                    name.setStyle("-fx-font-weight: bold; -fx-text-fill: #2B2118;");
+                    Label unitPrice = new Label(Fmt.money(l.getProduct().price()) + " x " + l.getQuantity());
+                    unitPrice.getStyleClass().add("muted");
+                    VBox info = new VBox(2, name, unitPrice);
+
+                    Region spacer = new Region();
+                    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+                    Label sub = new Label(Fmt.money(l.getSubtotal()));
+                    sub.setStyle("-fx-font-weight: bold; -fx-text-fill: #6F4E37;");
+
+                    HBox row = new HBox(8, info, spacer, sub);
+                    row.setAlignment(Pos.CENTER_LEFT);
+                    row.setPadding(new Insets(4, 2, 4, 2));
+                    setText(null);
+                    setGraphic(row);
+                }
             }
         });
-        list.setPlaceholder(new Label("No drinks yet.\nClick a drink to add it."));
+        list.setPlaceholder(new Label("No drinks yet.\nClick a drink on the left to add."));
+
         Button plus = new Button("+");
         Button minus = new Button("–");
         Button remove = new Button("Remove");
         plus.setOnAction(e -> changeQty(1));
         minus.setOnAction(e -> changeQty(-1));
         remove.setOnAction(e -> lines.remove(list.getSelectionModel().getSelectedItem()));
-        HBox qtyBar = new HBox(8, plus, minus, remove);
+        Region qtySpacer = new Region();
+        HBox.setHgrow(qtySpacer, Priority.ALWAYS);
+        HBox qtyBar = new HBox(8, plus, minus, qtySpacer, remove);
 
         total.getStyleClass().add("total");
-        Button cancel = new Button("Cancel");
-        cancel.setOnAction(e -> onDone.run());
-        Button confirm = new Button("Confirm order");
+        Button clearBtn = new Button("Clear");
+        clearBtn.setOnAction(e -> lines.clear());
+        clearBtn.setTooltip(new Tooltip("Esc"));
+
+        Button confirm = new Button("Confirm Order");
         confirm.getStyleClass().add("primary");
+        confirm.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(confirm, Priority.ALWAYS);
         confirm.setTooltip(new Tooltip("Ctrl+Enter"));
-        cancel.setTooltip(new Tooltip("Esc"));
+
         confirm.setOnAction(e -> {
             if (lines.isEmpty()) {
                 new Alert(Alert.AlertType.INFORMATION, "Please add at least one drink.").showAndWait();
                 return;
             }
-            service.createOrder(table.getId(), user.id(), lines);
+            service.createOrder(0, user.id(), lines);
+            new Alert(Alert.AlertType.INFORMATION, "Order created successfully!").showAndWait();
             onDone.run();
         });
-        HBox actions = new HBox(10, cancel, confirm);
+        HBox actions = new HBox(10, clearBtn, confirm);
 
-        VBox right = new VBox(12, head, list, qtyBar, total, actions);
-        right.setPrefWidth(340);
-        right.setPadding(new Insets(16));
+        VBox right = new VBox(14, head, list, qtyBar, new Separator(), total, actions);
+        right.setPrefWidth(360);
+        right.setPadding(new Insets(18));
         right.getStyleClass().add("card");
         VBox.setVgrow(list, Priority.ALWAYS);
 
         getChildren().addAll(left, right);
         addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, e -> {
-            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) { onDone.run(); e.consume(); }
-            else if (e.getCode() == javafx.scene.input.KeyCode.ENTER && e.isControlDown()) { confirm.fire(); e.consume(); }
+            if (e.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                lines.clear();
+                e.consume();
+            } else if (e.getCode() == javafx.scene.input.KeyCode.ENTER && e.isControlDown()) {
+                confirm.fire();
+                e.consume();
+            }
         });
+
         refreshCards();
         refreshTotal();
         lines.addListener((javafx.collections.ListChangeListener<OrderLine>) c -> refreshTotal());
@@ -96,12 +157,37 @@ public class OrderView extends HBox {
         cards.getChildren().clear();
         String q = search.getText() == null ? "" : search.getText().toLowerCase().trim();
         Category cat = filter.getValue();
+
+        double cardW = currentCardWidth;
+        double imgW = Math.max(90, cardW - 22);
+        double imgH = Math.round(imgW * 0.65);
+        double cardH = imgH + 78;
+
         for (Product p : service.getProducts()) {
             if (!q.isEmpty() && !p.name().toLowerCase().contains(q)) continue;
             if (cat != null && cat.id() != 0 && p.categoryId() != cat.id()) continue;
-            Button b = new Button(p.name() + "\n" + Fmt.money(p.price()));
-            b.setPrefSize(150, 90);
-            b.setWrapText(true);
+
+            Node thumb = createProductImage(p, imgW, imgH);
+
+            Label name = new Label(p.name());
+            name.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+            name.setWrapText(true);
+            name.setMaxWidth(imgW);
+            name.setAlignment(Pos.CENTER);
+            name.setTextAlignment(TextAlignment.CENTER);
+
+            Label price = new Label(Fmt.money(p.price()));
+            price.setStyle("-fx-text-fill: #6F4E37; -fx-font-weight: 600;");
+
+            VBox box = new VBox(6, thumb, name, price);
+            box.setAlignment(Pos.CENTER);
+            box.setMaxWidth(cardW - 10);
+
+            Button b = new Button();
+            b.setGraphic(box);
+            b.setPrefSize(cardW, cardH);
+            b.setMinWidth(cardW);
+            b.setMaxWidth(cardW);
             b.getStyleClass().add("product-card");
             b.setDisable(!p.available());
             b.setOnAction(e -> addProduct(p));
@@ -112,6 +198,87 @@ public class OrderView extends HBox {
             none.getStyleClass().add("muted");
             cards.getChildren().add(none);
         }
+    }
+
+    private Node createProductImage(Product p, double targetW, double targetH) {
+        String path = p.imagePath();
+        if (path != null && !path.isBlank()) {
+            Image img = loadImageSmart(path);
+            if (img != null && !img.isError() && img.getWidth() > 0 && img.getHeight() > 0) {
+                double targetRatio = targetW / targetH;
+                double imgW = img.getWidth();
+                double imgH = img.getHeight();
+                double imgRatio = imgW / imgH;
+
+                double cropW, cropH, cropX, cropY;
+                if (imgRatio > targetRatio) {
+                    cropH = imgH;
+                    cropW = imgH * targetRatio;
+                    cropX = (imgW - cropW) / 2.0;
+                    cropY = 0;
+                } else {
+                    cropW = imgW;
+                    cropH = imgW / targetRatio;
+                    cropX = 0;
+                    cropY = (imgH - cropH) / 2.0;
+                }
+
+                ImageView iv = new ImageView(img);
+                iv.setViewport(new Rectangle2D(cropX, cropY, cropW, cropH));
+                iv.setFitWidth(targetW);
+                iv.setFitHeight(targetH);
+                iv.setPreserveRatio(true);
+                iv.setSmooth(true);
+
+                Rectangle clip = new Rectangle(targetW, targetH);
+                clip.setArcWidth(14);
+                clip.setArcHeight(14);
+                iv.setClip(clip);
+                return iv;
+            } else {
+                System.out.println("Could not load image for " + p.name() + " -> " + path);
+            }
+        }
+
+        Label placeholder = new Label("☕");
+        placeholder.setPrefSize(targetW, targetH);
+        placeholder.setAlignment(Pos.CENTER);
+        placeholder.setStyle("-fx-background-color: #F4EFEA; -fx-background-radius: 10; -fx-font-size: 24px;");
+        return placeholder;
+    }
+
+    private Image loadImageSmart(String rawPath) {
+        String base = rawPath.replaceFirst("\\.[^.]+$", "");
+        String[] prefixes = rawPath.startsWith("/") ? new String[]{""} : new String[]{"/images/", "/gui/images/"};
+        String[] exts = {"", ".png", ".jpg", ".jpeg"};
+
+        for (String prefix : prefixes) {
+            for (String ext : exts) {
+                String candidate = ext.isEmpty() ? prefix + rawPath : prefix + base + ext;
+                if (!candidate.startsWith("/")) candidate = "/" + candidate;
+
+                // 1. Check classpath (target/classes)
+                for (String cp : new String[]{candidate, "/gui" + candidate}) {
+                    InputStream is = getClass().getResourceAsStream(cp);
+                    if (is != null) {
+                        Image img = new Image(is);
+                        if (!img.isError()) return img;
+                    }
+                }
+
+                // 2. Check source folder directly on disk
+                for (String root : new String[]{"src/main/resources", "BeverageGUI/src/main/resources"}) {
+                    for (String sub : new String[]{candidate, "/gui" + candidate}) {
+                        File f = new File(root + sub);
+                        if (f.exists()) {
+                            Image img = new Image(f.toURI().toString());
+                            if (!img.isError()) return img;
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private void addProduct(Product p) {
@@ -130,7 +297,8 @@ public class OrderView extends HBox {
         OrderLine l = list.getSelectionModel().getSelectedItem();
         if (l == null) return;
         int q = l.getQuantity() + delta;
-        if (q <= 0) lines.remove(l); else l.setQuantity(q);
+        if (q <= 0) lines.remove(l);
+        else l.setQuantity(q);
         list.refresh();
         refreshTotal();
     }

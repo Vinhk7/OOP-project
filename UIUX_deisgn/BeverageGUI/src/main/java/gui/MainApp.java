@@ -22,9 +22,7 @@ public class MainApp extends Application {
         stage.show();
     }
 
-    private void showLogin() {
-        setRoot(new LoginView(service, this::showMain).getRoot(), 420, 480);
-    }
+    private void showLogin() { setRoot(new LoginView(service, this::showMain).getRoot(), 480, 520); }
 
     private void showMain(User user) {
         setRoot(new MainShell(service, user, this::showLogin).getRoot(), 1100, 700);
