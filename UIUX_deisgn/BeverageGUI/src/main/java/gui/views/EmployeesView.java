@@ -1,6 +1,7 @@
 package gui.views;
 
 import gui.Ui;
+import gui.Fmt;
 import gui.model.Employee;
 import gui.model.User;
 import gui.service.AppService;
@@ -52,6 +53,7 @@ public class EmployeesView extends VBox {
                 Ui.<Employee>col("Full name", Employee::fullName),
                 Ui.<Employee>col("Role", Employee::role),
                 Ui.<Employee>col("Phone", Employee::phone),
+                Ui.<Employee>col("Salary", e -> Fmt.money(e.salary())),
                 Ui.<Employee>col("Status", Employee::status));
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         table.setPlaceholder(new Label("No employees found."));
@@ -77,8 +79,8 @@ public class EmployeesView extends VBox {
         username.setDisable(!adding);
         PasswordField password = new PasswordField();
         TextField fullName = new TextField(adding ? "" : existing.fullName());
-        ComboBox<String> role = new ComboBox<>(FXCollections.observableArrayList("Staff", "Manager"));
-        role.setValue(adding ? "Staff" : existing.role());
+        ComboBox<String> role = new ComboBox<>(FXCollections.observableArrayList("STAFF", "ADMIN"));
+        role.setValue(adding ? "STAFF" : existing.role());
         TextField phone = new TextField(adding ? "" : existing.phone());
 
         GridPane g = new GridPane();
@@ -95,7 +97,7 @@ public class EmployeesView extends VBox {
         d.showAndWait().filter(r -> r == ButtonType.OK).ifPresent(r -> {
             if (username.getText().isBlank() || fullName.getText().isBlank() || (adding && password.getText().length() < 6)) {
                 Ui.error(adding ? "Username and full name are required, and the password needs at least 6 characters."
-                                : "Full name is required.");
+                        : "Full name is required.");
                 return;
             }
             if (!phone.getText().isBlank() && !phone.getText().trim().matches("\\d{9,11}")) {

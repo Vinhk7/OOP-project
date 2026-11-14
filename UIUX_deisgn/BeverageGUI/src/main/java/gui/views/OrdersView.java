@@ -23,17 +23,17 @@ public class OrdersView extends VBox {
         super(12);
         this.service = service;
 
-        filter.getItems().addAll("All", "Preparing", "Completed", "Cancelled");
+        filter.getItems().addAll("All", "PENDING", "COMPLETED", "CANCELLED");
         filter.setValue("All");
         filter.valueProperty().addListener((o, a, b) -> load());
 
         Button done = new Button("Mark completed");
         done.getStyleClass().add("primary");
-        done.setOnAction(e -> change("Completed"));
+        done.setOnAction(e -> change("COMPLETED"));
 
         Button cancel = new Button("Cancel order");
         cancel.getStyleClass().add("danger");
-        cancel.setOnAction(e -> change("Cancelled"));
+        cancel.setOnAction(e -> change("CANCELLED"));
 
         Button details = new Button("View details");
         details.setOnAction(e -> openSelected());
@@ -54,8 +54,8 @@ public class OrdersView extends VBox {
                 } else {
                     Label badge = new Label(status);
                     String style = switch (status) {
-                        case "Completed" -> "-fx-background-color: #E6F4EA; -fx-text-fill: #1E7E34;";
-                        case "Cancelled" -> "-fx-background-color: #FCE8E6; -fx-text-fill: #C5221F;";
+                        case "COMPLETED" -> "-fx-background-color: #E6F4EA; -fx-text-fill: #1E7E34;";
+                        case "CANCELLED" -> "-fx-background-color: #FCE8E6; -fx-text-fill: #C5221F;";
                         default -> "-fx-background-color: #FEF7E0; -fx-text-fill: #B06000;";
                     };
                     badge.setStyle(style + " -fx-font-weight: bold; -fx-font-size: 12px; -fx-padding: 3 10; -fx-background-radius: 12;");
@@ -96,7 +96,7 @@ public class OrdersView extends VBox {
     private void change(String newStatus) {
         Order o = table.getSelectionModel().getSelectedItem();
         if (o == null) { Ui.info("Please select an order first."); return; }
-        if (!o.status().equals("Preparing")) { Ui.info("Only orders that are being prepared can be changed."); return; }
+        if (!o.status().equals("PENDING")) { Ui.info("Only pending orders can be updated."); return; }
         if (Ui.confirm("Set order #" + o.id() + " to " + newStatus + "?")) {
             service.updateOrderStatus(o.id(), newStatus);
             load();
@@ -126,18 +126,21 @@ public class OrdersView extends VBox {
         TableView<OrderLine> t = new TableView<>(FXCollections.observableArrayList(service.getOrderLines(o.id())));
         t.getColumns().addAll(
                 Ui.<OrderLine>col("Drink", l -> l.getProduct().name()),
+                Ui.<OrderLine>col("Options", l -> l.getSize() + " / " + l.getSugarLevel() + "% sugar / " + l.getIceLevel() + "% ice"),
                 Ui.<OrderLine>col("Qty", l -> String.valueOf(l.getQuantity())),
-                Ui.<OrderLine>col("Unit price", l -> Fmt.money(l.getProduct().price())),
+                Ui.<OrderLine>col("Unit price", l -> Fmt.money(l.getUnitPrice())),
                 Ui.<OrderLine>col("Subtotal", l -> Fmt.money(l.getSubtotal())));
         t.getColumns().get(0).setPrefWidth(240);
-        t.getColumns().get(1).setPrefWidth(50);
-        t.getColumns().get(2).setPrefWidth(110);
+        t.getColumns().get(1).setPrefWidth(220);
+        t.getColumns().get(2).setPrefWidth(50);
         t.getColumns().get(3).setPrefWidth(110);
+        t.getColumns().get(4).setPrefWidth(110);
         t.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         t.setPlaceholder(new Label("No drinks recorded for this order."));
         t.setPrefSize(520, 220);
 
-        Label total = new Label("Total: " + Fmt.money(o.total()));
+        Label total = new Label("Payment: " + o.paymentMethod() + " | Points used: " + o.pointsUsed()
+                + " | Total: " + Fmt.money(o.total()));
         total.getStyleClass().add("total");
 
         VBox box = new VBox(12, head, t, total);

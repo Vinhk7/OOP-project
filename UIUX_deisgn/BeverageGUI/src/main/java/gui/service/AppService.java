@@ -3,44 +3,41 @@ package gui.service;
 import gui.model.*;
 import java.util.List;
 
-/**
- * THE CONTRACT between the GUI tier and the Controller tier.
- * The GUI only calls these methods. Agree on the names with the controller teammate.
- * To connect the real backend, write a class that implements this interface
- * and swap it in MainApp (one line).
- */
+/** Methods used by the JavaFX screens to work with sample data. */
 public interface AppService {
-    // --- account ---
-    User login(String username, String password);               // null if wrong
+    User login(String username, String password);
 
-    // --- categories ---
+    // Categories and products
     List<Category> getCategories();
     void addCategory(String name);
     void renameCategory(int categoryId, String newName);
-    boolean deleteCategory(int categoryId);                       // false if products still use it
-
-    // --- products ---
+    boolean deleteCategory(int categoryId);
     List<Product> getProducts();
     void addProduct(String name, int categoryId, long price, boolean available);
     void updateProduct(int productId, String name, int categoryId, long price, boolean available);
     void deleteProduct(int productId);
 
-    // --- tables ---
-    List<TableInfo> getTables();
-    void setTableStatus(int tableId, String status);
-    void addTable(String name);
-    boolean deleteTable(int tableId);                             // false if table is occupied
+    // Customer loyalty and toppings
+    List<Customer> getCustomers();
+    Customer findCustomer(String phone);
+    boolean addCustomer(String name, String phone);
+    List<Topping> getToppings();
+    void addTopping(String name, long price);
+    void updateTopping(int id, String name, long price, boolean active);
+    boolean deleteTopping(int id);
 
-    // --- orders ---
+    // Orders
     List<Order> getOrders();
     void createOrder(int tableId, int userId, List<OrderLine> lines);
-    List<OrderLine> getOrderLines(int orderId);                   // drinks inside one order
-    void updateOrderStatus(int orderId, String status);           // Completed / Cancelled frees the table
+    void createOrder(int userId, List<OrderLine> lines, String paymentMethod,
+                     String customerPhone, int pointsUsed);
+    List<OrderLine> getOrderLines(int orderId);
+    void updateOrderStatus(int orderId, String status);
 
-    // --- employees ---
+    // Employees
     List<Employee> getEmployees();
-    boolean addEmployee(String username, String password, String fullName, String role, String phone); // false if username taken
-    void updateEmployee(int employeeId, String fullName, String role, String phone);   // username cannot change
-    void setEmployeeStatus(int employeeId, String status);        // Active / Inactive
+    boolean addEmployee(String username, String password, String fullName, String role, String phone);
+    void updateEmployee(int employeeId, String fullName, String role, String phone);
+    void setEmployeeStatus(int employeeId, String status);
     void deleteEmployee(int employeeId);
 }

@@ -27,7 +27,7 @@ public class MainShell {
         this.service = service;
         this.user = user;
 
-        Label brand = new Label("☕ Cafe");
+        Label brand = new Label("☕ Coffee");
         brand.getStyleClass().add("brand");
         sidebar.getChildren().add(brand);
 
@@ -37,12 +37,15 @@ public class MainShell {
 
         if (user.isManager()) {
             Separator sep = new Separator();
-            Label mgr = new Label("MANAGER");
+            Label mgr = new Label("ADMIN");
             mgr.getStyleClass().add("section-label");
             sidebar.getChildren().addAll(sep, mgr);
             addNav("Products", () -> show("Products", new ProductsView(service, true)));
             addNav("Categories", () -> show("Categories", new CategoriesView(service)));
             addNav("Employees", () -> show("Employees", new EmployeesView(service, user)));
+            addNav("Customers", () -> show("Customers", new CustomersView(service)));
+            addNav("Toppings", () -> show("Toppings", new ToppingsView(service)));
+            addNav("Dashboard", () -> show("Dashboard", new DashboardView(service)));
         }
 
         sidebar.setPadding(new Insets(16));

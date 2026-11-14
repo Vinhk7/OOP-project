@@ -17,6 +17,10 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.text.TextAlignment;
 import java.io.File;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /** Left: menu cards (search + category filter). Right: current order with running total. */
 public class OrderView extends HBox {
@@ -29,6 +33,7 @@ public class OrderView extends HBox {
     private final ComboBox<Category> filter = new ComboBox<>();
     private static final Category ALL = new Category(0, "All");
     private double currentCardWidth = 138;
+    private final Map<String, Image> imageCache = new HashMap<>();
 
     public OrderView(AppService service, User user, Runnable onDone) {
         super(20);
@@ -79,7 +84,9 @@ public class OrderView extends HBox {
                 } else {
                     Label name = new Label(l.getProduct().name());
                     name.setStyle("-fx-font-weight: bold; -fx-text-fill: #2B2118;");
-                    Label unitPrice = new Label(Fmt.money(l.getProduct().price()) + " x " + l.getQuantity());
+                    Label unitPrice = new Label(l.getSize() + ", " + l.getSugarLevel() + "% sugar, "
+                            + l.getIceLevel() + "% ice | " + Fmt.money(l.getUnitPrice())
+                            + " x " + l.getQuantity());
                     unitPrice.getStyleClass().add("muted");
                     VBox info = new VBox(2, name, unitPrice);
 
@@ -104,15 +111,43 @@ public class OrderView extends HBox {
         Button remove = new Button("Remove");
         plus.setOnAction(e -> changeQty(1));
         minus.setOnAction(e -> changeQty(-1));
-        remove.setOnAction(e -> lines.remove(list.getSelectionModel().getSelectedItem()));
+        remove.setOnAction(e -> {
+            lines.remove(list.getSelectionModel().getSelectedItem());
+            refreshTotal();
+        });
         Region qtySpacer = new Region();
         HBox.setHgrow(qtySpacer, Priority.ALWAYS);
         HBox qtyBar = new HBox(8, plus, minus, qtySpacer, remove);
 
         total.getStyleClass().add("total");
         Button clearBtn = new Button("Clear");
-        clearBtn.setOnAction(e -> lines.clear());
+        clearBtn.setOnAction(e -> {
+            lines.clear();
+            refreshTotal();
+        });
         clearBtn.setTooltip(new Tooltip("Esc"));
+
+        ComboBox<String> payment = new ComboBox<>(FXCollections.observableArrayList("CASH", "QR"));
+        payment.setValue("CASH");
+        TextField customerPhone = new TextField();
+        customerPhone.setPromptText("Customer phone (optional)");
+        TextField usePoints = new TextField("0");
+        usePoints.setPromptText("Points to redeem");
+        Button addCustomer = new Button("+ Customer");
+        addCustomer.setOnAction(e -> {
+            TextInputDialog nameDialog = new TextInputDialog();
+            nameDialog.setTitle("Add customer");
+            nameDialog.setHeaderText("Enter customer name");
+            nameDialog.showAndWait().ifPresent(name -> {
+                if (!service.addCustomer(name.trim(), customerPhone.getText().trim())) {
+                    new Alert(Alert.AlertType.ERROR, "Enter a new phone number and a customer name.").showAndWait();
+                } else {
+                    new Alert(Alert.AlertType.INFORMATION, "Customer added.").showAndWait();
+                }
+            });
+        });
+        HBox paymentBar = new HBox(8, payment, customerPhone, addCustomer);
+        HBox.setHgrow(customerPhone, Priority.ALWAYS);
 
         Button confirm = new Button("Confirm Order");
         confirm.getStyleClass().add("primary");
@@ -125,13 +160,47 @@ public class OrderView extends HBox {
                 new Alert(Alert.AlertType.INFORMATION, "Please add at least one drink.").showAndWait();
                 return;
             }
-            service.createOrder(0, user.id(), lines);
-            new Alert(Alert.AlertType.INFORMATION, "Order created successfully!").showAndWait();
-            onDone.run();
+
+            // An empty points field means the customer does not use any points.
+            String pointsText = usePoints.getText().trim();
+            int points = 0;
+
+            if (!pointsText.isEmpty()) {
+                try {
+                    points = Integer.parseInt(pointsText);
+                } catch (NumberFormatException ex) {
+                    new Alert(Alert.AlertType.ERROR, "Please enter a valid number of points.").showAndWait();
+                    return;
+                }
+            }
+
+            if (points < 0) {
+                new Alert(Alert.AlertType.ERROR, "Points cannot be negative.").showAndWait();
+                return;
+            }
+
+            if (payment.getValue() == null) {
+                new Alert(Alert.AlertType.ERROR, "Please select a payment method.").showAndWait();
+                return;
+            }
+
+            try {
+                service.createOrder(user.id(), new ArrayList<>(lines), payment.getValue(),
+                        customerPhone.getText().trim(), points);
+                new Alert(Alert.AlertType.INFORMATION, "Order created successfully!").showAndWait();
+                onDone.run();
+            } catch (IllegalArgumentException | IllegalStateException ex) {
+                String message = ex.getMessage();
+                if (message == null || message.isBlank()) message = "Invalid order information.";
+                new Alert(Alert.AlertType.ERROR, message).showAndWait();
+            } catch (ArithmeticException ex) {
+                new Alert(Alert.AlertType.ERROR, "The order total is too large.").showAndWait();
+            }
         });
         HBox actions = new HBox(10, clearBtn, confirm);
 
-        VBox right = new VBox(14, head, list, qtyBar, new Separator(), total, actions);
+        VBox right = new VBox(10, head, list, qtyBar, new Separator(), total,
+                new Label("Payment and customer"), paymentBar, usePoints, actions);
         right.setPrefWidth(360);
         right.setPadding(new Insets(18));
         right.getStyleClass().add("card");
@@ -164,6 +233,7 @@ public class OrderView extends HBox {
         double cardH = imgH + 78;
 
         for (Product p : service.getProducts()) {
+            if (!p.available()) continue;
             if (!q.isEmpty() && !p.name().toLowerCase().contains(q)) continue;
             if (cat != null && cat.id() != 0 && p.categoryId() != cat.id()) continue;
 
@@ -248,6 +318,13 @@ public class OrderView extends HBox {
     }
 
     private Image loadImageSmart(String rawPath) {
+        if (imageCache.containsKey(rawPath)) return imageCache.get(rawPath);
+        Image found = findImage(rawPath);
+        imageCache.put(rawPath, found);
+        return found;
+    }
+
+    private Image findImage(String rawPath) {
         String base = rawPath.replaceFirst("\\.[^.]+$", "");
         String[] prefixes = rawPath.startsWith("/") ? new String[]{""} : new String[]{"/images/", "/gui/images/"};
         String[] exts = {"", ".png", ".jpg", ".jpeg"};
@@ -261,8 +338,12 @@ public class OrderView extends HBox {
                 for (String cp : new String[]{candidate, "/gui" + candidate}) {
                     InputStream is = getClass().getResourceAsStream(cp);
                     if (is != null) {
-                        Image img = new Image(is);
-                        if (!img.isError()) return img;
+                        try (InputStream stream = is) {
+                            Image img = new Image(stream);
+                            if (!img.isError()) return img;
+                        } catch (java.io.IOException ex) {
+                            return null;
+                        }
                     }
                 }
 
@@ -282,15 +363,52 @@ public class OrderView extends HBox {
     }
 
     private void addProduct(Product p) {
-        for (OrderLine l : lines) {
-            if (l.getProduct().id() == p.id()) {
-                l.setQuantity(l.getQuantity() + 1);
-                list.refresh();
-                refreshTotal();
-                return;
-            }
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("Customize " + p.name());
+        ComboBox<String> size = new ComboBox<>(FXCollections.observableArrayList("S", "M", "L"));
+        size.setValue("S");
+        ComboBox<Integer> sugar = new ComboBox<>(FXCollections.observableArrayList(0, 30, 50, 70, 100));
+        sugar.setValue(100);
+        ComboBox<Integer> ice = new ComboBox<>(FXCollections.observableArrayList(0, 30, 50, 70, 100));
+        ice.setValue(100);
+        VBox toppingsBox = new VBox(5);
+        List<CheckBox> checks = new ArrayList<>();
+        Map<CheckBox, Topping> choices = new HashMap<>();
+        for (Topping t : service.getToppings()) {
+            if (!t.active()) continue;
+            CheckBox cb = new CheckBox(t.name() + " (+" + Fmt.money(t.price()) + ")");
+            checks.add(cb);
+            choices.put(cb, t);
+            toppingsBox.getChildren().add(cb);
         }
-        lines.add(new OrderLine(p, 1));
+        GridPane form = new GridPane();
+        form.setHgap(12); form.setVgap(10); form.setPadding(new Insets(14));
+        form.addRow(0, new Label("Size"), size);
+        form.addRow(1, new Label("Sugar %"), sugar);
+        form.addRow(2, new Label("Ice %"), ice);
+        VBox content = new VBox(10, form, new Label("Toppings"), toppingsBox);
+        dialog.getDialogPane().setContent(new ScrollPane(content));
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+        dialog.showAndWait().filter(b -> b == ButtonType.OK).ifPresent(b -> {
+            List<OrderDetailTopping> selected = new ArrayList<>();
+            for (CheckBox cb : checks) {
+                if (cb.isSelected()) {
+                    Topping t = choices.get(cb);
+                    selected.add(new OrderDetailTopping(t.id(), t.name(), t.price()));
+                }
+            }
+            OrderLine added = new OrderLine(p, 1, size.getValue(), sugar.getValue(), ice.getValue(), selected);
+            for (OrderLine line : lines) {
+                if (line.sameOptions(added)) {
+                    line.setQuantity(line.getQuantity() + 1);
+                    list.refresh();
+                    refreshTotal();
+                    return;
+                }
+            }
+            lines.add(added);
+            refreshTotal();
+        });
     }
 
     private void changeQty(int delta) {
